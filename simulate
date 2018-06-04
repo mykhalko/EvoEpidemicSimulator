@@ -68,10 +68,10 @@ class Node:
         self.recipient_amount = recipient_amount
         self.history_size = history_size
         self.visited = False
-        self.network = {self}
+        self.network = set()
 
     def link_with(self, network):
-        self.network.update(network)
+        self.network = (network | self.network) - {self}
 
     def describe(self):
         print('Current: ' + str(self))
