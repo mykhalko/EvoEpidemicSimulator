@@ -19,6 +19,8 @@ import collections
 # that shouldn't be visited (blacklist). Node updates the blacklist
 # and send it to another nodes, that not inside the blacklist (modified algorithm)
 
+# Recipients amount set as 5 (X = 5)
+
 
 def counter(function):
     def wrapper(*args, **kwargs):
