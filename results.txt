@@ -1,3 +1,5 @@
+Simulate with 30 nodes in network
+
 ./simulate -n 30 -i 1000 (network with 30 nodes, repeat for 1000 times)
 In 80.80% cases all nodes received packet.
 Iterations amount: 149895
@@ -5,3 +7,14 @@ Iterations amount: 149895
 ./simulate -n 30 -i 1000 --usehistory 5 (network with 30 nodes, repeat for 1000 times)
 In 88.30% cases all nodes received packet.
 Iterations amount: 150335
+
+Simulate with 30 nodes in network
+
+./simulate -n 50 -i 1000
+In 72.20% cases all nodes received packet.
+Iterations amount: 249345
+
+./simulate -n 50 -i 1000 --usehistory 10
+In 80.10% cases all nodes received packet.
+Iterations amount: 249885
+
