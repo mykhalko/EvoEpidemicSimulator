@@ -8,7 +8,7 @@ Iterations amount: 149895
 In 88.30% cases all nodes received packet.
 Iterations amount: 150335
 
-Simulate with 30 nodes in network
+Simulate with 50 nodes in network
 
 ./simulate -n 50 -i 1000
 In 72.20% cases all nodes received packet.
