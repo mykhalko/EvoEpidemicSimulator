@@ -1,0 +1,176 @@
+#!/usr/bin/python
+import sys
+import random
+import re
+import collections
+
+
+# class Node represents node of the network,
+# it contains links to all nodes from the network (every to every)
+# also node have information about:
+#   how many times should be packet sent
+#   max. size of history/blacklist
+#   was it visited or no
+#
+# method 'activate' represent receiving a packet
+# if history size is 0, then node will send the packet to randomly chosen
+# linked nodes (standard algorithm)
+# if history is not 0, then node also receive set of nodes,
+# that shouldn't be visited (blacklist). Node updates the blacklist
+# and send it to another nodes, that not inside the blacklist (modified algorithm)
+
+
+def counter(function):
+    def wrapper(*args, **kwargs):
+        wrapper.count = wrapper.count + 1
+        return function(*args, **kwargs)
+    wrapper.count = 0
+    return wrapper
+
+
+DataDescription = collections.namedtuple('DataDescription', [
+        'nodes_amount',
+        'repeats_amount',
+        'history_size'
+    ])
+
+Activity = collections.namedtuple('Activity',[
+    'function',
+    'args',
+    'kwargs'
+])
+
+
+def get_arguments(args):
+    if len(args) < 5:
+        raise ValueError('Incorrect application syntax!')
+
+    if args[1] == '-n' and re.match('[0-9]+', args[2]):
+        nodes_amount = int(args[2])
+    else:
+        raise ValueError('Incorrect application syntax!')
+    if args[3] == '-i' and re.match('[0-9]+', args[4]):
+        repeats_amount = int(args[4])
+    else:
+        raise ValueError('Incorrect application syntax!')
+    if len(args) >= 7:
+        if args[5] == '--usehistory' and re.match('[0-9]+', args[6]):
+            history = int(args[6])
+            return DataDescription(nodes_amount, repeats_amount, history)
+    return DataDescription(nodes_amount, repeats_amount, None)
+
+
+class Node:
+
+    def __init__(self, recipient_amount=5, history_size=0):
+        self.recipient_amount = recipient_amount
+        self.history_size = history_size
+        self.visited = False
+        self.network = {self}
+
+    def link_with(self, network):
+        self.network.update(network)
+
+    def describe(self):
+        print('Current: ' + str(self))
+        for node in self.network:
+            print('Linked: ' + str(node))
+
+    def reset_node(self):
+        self.visited = False
+
+    def reset_network(self):
+        self.visited = False
+        for node in self.network:
+            node.reset_node()
+
+    @counter
+    def activate(self, *, activation_queue, blacklist=None):
+        if not self.visited:
+            self.visited = True
+            if not self.history_size:
+                for i in range(self.recipient_amount):
+                    activation_queue.append(
+                        Node.activate,
+                        random.choice(list(self.network)),
+                        activation_queue=activation_queue)
+            else:
+                if not blacklist:
+                    blacklist = set()
+                potential_recipients = self.network - blacklist
+                if len(blacklist) >= self.history_size:
+                    blacklist.pop()
+                blacklist.add(self)
+                for i in range(self.recipient_amount):
+                    activation_queue.append(
+                        Node.activate,
+                        random.choice(list(potential_recipients)),
+                        activation_queue=activation_queue,
+                        blacklist=blacklist.copy())
+
+    def all_visited(self):
+        for node in self.network:
+            if not node.visited:
+                return False
+        return self.visited
+
+    def __str__(self):
+        return 'node #' + str(id(self)) + ('' if self.visited else ' no') + ' visited'
+
+
+def create_network(size, history=0, recipients_amount=5):
+    network = {Node(recipients_amount, history) for i in range(size)}
+    for node in network:
+        node.link_with(network)
+    return network.pop()
+
+
+class QueueExecutor:
+
+    def __init__(self):
+        self.queue = collections.deque()
+
+    def append(self, function, *args, **kwargs):
+        if not callable(function):
+            raise ValueError('not callable object sent')
+        self.queue.append(Activity(function, args, kwargs))
+
+    def execute(self):
+        while True:
+            try:
+                activity = self.queue.popleft()
+                activity.function(*activity.args, **activity.kwargs)
+            except IndexError:
+                break
+
+
+def main():
+    try:
+        info = get_arguments(sys.argv)
+    except ValueError as error:
+        print(str(error))
+        print('Usage: simulate -n NODES_AMOUNT -i REPEATS_AMOUNT [--usehistory HISTORY_SIZE]')
+        return
+
+    successful = 0
+    iterations = 0
+    queue = QueueExecutor()
+    if info.history_size:
+        network = create_network(info.nodes_amount, info.history_size, 5)
+    else:
+        network = create_network(info.nodes_amount, 0, 5)
+
+    for i in range(info.repeats_amount):
+        queue.append(Node.activate, network, activation_queue=queue)
+        queue.execute()
+        iterations = iterations + Node.activate.count
+        Node.activate.count = 0
+        if network.all_visited():
+            successful = successful + 1
+        network.reset_network()
+    print('In {0:.2f}% cases all nodes received packet.'.format(successful / info.repeats_amount * 100))
+    print('Iterations amount:', iterations)
+
+
+if __name__ == '__main__':
+    main()
